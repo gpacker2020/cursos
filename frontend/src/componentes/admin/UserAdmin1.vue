@@ -1,0 +1,200 @@
+
+<template>
+
+     <div class="user-admin">
+        <b-form>
+            <input id="user-id" type="hidden" v-model="user.id"/>
+            <b-row>
+                <b-col md="6" sm="12">
+                    <b-form-group label="Nome:" label-for="user-name">
+                        <b-form-input id="user-name" type="text"
+                            v-model="user.name" required
+                            :readonly="mode ==='remove'"
+                            placeholder="Informe o nome do usuário" />
+                    </b-form-group>
+                </b-col>
+                <b-col md="6" sm="12">
+                    <b-form-group label="Email:" label-for="user-email">
+                        <b-form-input id="user-email" type="text"
+                            v-model="user.email" required
+                            :readonly="mode ==='remove'"
+                            placeholder="Informe o e-mail do usuário..." />
+                    </b-form-group>
+                </b-col>
+            </b-row>
+
+            <b-form-checkbox id="user-admin" v-show="mode === 'save'" 
+                    v-model="user.admin" class="mt-3 mb-3" >
+                Administrador?
+            </b-form-checkbox>
+
+            <b-row v-show="mode === 'save'">
+                <b-col md="6" sm="12">
+                    <b-form-group label="Senha:" label-for="user-password">
+                        <b-form-input id="user-password" type="password"
+                            v-model="user.password" required
+                            placeholder="Informe a senha...." />
+                    </b-form-group>
+                </b-col>
+                <b-col md="6" sm="12">
+                    <b-form-group label="Confirmação:" label-for="user-confirm-password">
+                        <b-form-input id="user-confirm-password" type="password"
+                            v-model="user.confirmPassword" required
+                            placeholder="Confirme a senha..." />
+                    </b-form-group>
+                </b-col>
+
+            </b-row>
+
+            <b-row>
+                <b-col xs="12">
+                    <b-button variant="primary" v-if="mode === 'save'"
+                        @click="save">Salvar</b-button> 
+                    <b-button variant="danger" v-if="mode === 'remove'"
+                        @click="remove">Excluir</b-button>
+                    <b-button class="ml-2" @click="reset">Cancelar</b-button>
+                        <b-button variant="secondary"  class="btn-filtro"
+                                offset-md="5"
+                                @click="filtrar">
+                            <i :class=btnShowFilter > </i>
+                        </b-button>                    
+                </b-col>
+            </b-row>
+            <hr>
+
+        </b-form>
+
+        <b-form  >
+            <b-row v-if="filter === 'on'" >
+                <b-col >
+                    <b-form-group label="Filtrar p/Nome:" label-for="user-name-filtro">
+                        <b-form-input id="user-name-filtro" type="text"
+                            v-model="user.name" 
+                            :readonly="mode ==='remove'"
+                            placeholder="Informe o nome do usuário" />
+                    </b-form-group>
+                </b-col>
+                <b-col >
+                    <b-form-group label="Filtrar p/Email:" label-for="user-email-filtro">
+                        <b-form-input id="user-email-filtro" type="text"
+                            v-model="user.email" 
+                            placeholder="Informe o e-mail do usuário..." />
+                    </b-form-group>
+                </b-col>
+                <b-col  >
+                    <b-button variant="primary" class="btn-filter" cols="12">
+                        <i class="fa fa-filter"> </i>
+                    </b-button>
+                </b-col>
+            </b-row>  
+
+        </b-form>
+
+        <b-table hover stripped :items="users" :fields="fields"> 
+            <template slot="actions" slot-scope="data">
+                <b-button variant="warning" @click="loadUser(data.item)" class="mr-2">
+                    <i class="fa fa-pencil"> </i>
+                </b-button>
+                <b-button variant="danger" @click="loadUser(data.item, 'remove')" class="mr-2">
+                    <i class="fa fa-trash"> </i>
+                </b-button>                
+            </template>
+        </b-table>
+    </div>
+</template>
+
+<script>
+
+import { baseApiUrl , showError } from '@/global'
+import axios from 'axios'
+
+export default {
+    name: 'UserAdmin1' ,
+    data: function() {
+        return {
+            mode: 'save',
+            filter: 'on',
+            user: {},
+            btnShowFilter: 'fa fa-angle-up',
+            users: [],
+            fields: [
+                { key: 'id', label: 'Código', sortable: true },
+                { key: 'name', label: 'Nome', sortable: true },
+                { key: 'email', label: 'E-mail', sortable: true},
+                { key: 'admin', label: 'Administrador', sortable: true, 
+                    formatter: value => value  ? 'Sim' : 'Não'  }, 
+                { key: 'actions', label: 'Ações' }
+            ]
+        }
+    },
+    methods: {
+        loadUsers() {
+            const url = `${baseApiUrl}/users`
+            axios.get(url).then( res => {
+                this.users = res.data
+                //console.log(this.users, this.mode ) //testar se esta aparecendo no console do browser
+            })
+        },
+        reset() {
+            this.user = {},
+            this.mode = 'save',
+            this.filter = 'on',
+            this.loadUsers()
+        },
+        save() {
+            const method = this.user.id ? 'put' : 'post'
+            const id = this.user.id ? `${this.user.id}` : ''
+            axios[method](`${baseApiUrl}/users/${id}`, this.user )
+                .then(() => {
+                    this.$toasted.global.defaultSuccess()
+                    this.reset()
+                })
+                .catch(showError)
+        },
+        remove() {
+            const id = this.user.id
+            axios.delete(`${baseApiUrl}/users/${id}`)
+                .then(() =>{
+                    this.$toasted.global.defaultSuccess()
+                    this.reset()
+                })
+                .catch(showError)
+
+        },
+        loadUser( user, mode='save' ) {
+            this.mode = mode
+            this.user = { ...user }
+
+        }, 
+        filtrar() {
+            //console.log('teste', this.filter )
+            //this.filter =  if this.filter = 'off' ? 'on' : 'off'
+            if (this.filter == 'on') {
+                this.filter = 'off'
+                this.btnShowFilter = 'fa fa-angle-down'
+            } else {
+                this.filter = 'on'
+                this.btnShowFilter = 'fa fa-angle-up'
+            }
+        }   
+    },
+    mounted() {
+        this.loadUsers()
+    }
+}
+</script>
+
+<style>
+
+.btn-filter {
+    height: 40px;
+    margin-right: 2px;
+    margin-top: 30px;
+}
+
+.btn-filtro {
+    align-self: end;
+    margin-left: 10px;
+}
+
+</style>
